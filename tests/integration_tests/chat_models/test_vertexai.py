@@ -86,3 +86,25 @@ def test_vertexai_single_call_failes_no_message() -> None:
         str(exc_info.value)
         == "You should provide at least one message to start the chat!"
     )
+
+
+def test_vertexai_parameter_integrity() -> None:
+    """Vertex AI sdk does not maintain hyper-parameters for chat sessions when calling
+    model.send_message method. It is necessary to pass the parameters set in Chat object
+    inside the call to send_message. This is really an error in vertexai sdk but a quick fix here
+    can be added without much risk of forward incompatibilities.
+    """
+    model = ChatVertexAI(max_output_tokens=1024, temperature=0.1)
+    raw_context = (
+        "My name is Ned. You are my personal assistant. My favorite movies "
+        "are Lord of the Rings and Hobbit."
+    )
+    question = (
+        "Hello, could you recommend a good movie for me to watch this evening, please?"
+    )
+    context = SystemMessage(content=raw_context)
+    message = HumanMessage(content=question)
+    response = model([context, message])
+    # this tests that the larger max_output_tokens value is being passed. the default of 128 will
+    # will cause this to fail. sorry I couldn't think of a better way to do it in short order.
+    assert len(response.content.split(' ')) * 3/4 > 128
